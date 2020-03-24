@@ -7,15 +7,17 @@ import org.abelsromero.json.bigjson.model.Book;
 import org.abelsromero.json.bigjson.model.GenericCollection;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Collection;
 
-@RestController()
+@RestController
+@RequestMapping("/books")
 public class BigJsonController {
 
     private final ObjectMapper objectMapper;
@@ -23,49 +25,54 @@ public class BigJsonController {
 
     private final Gson gson = new GsonBuilder().create();
 
-    private final Collection<Book> instances;
+    private Collection<Book> cache;
 
-    private static final int GENERATED_INSTANCES = 10_000;
+    private static final int DEFAULT_GENERATED_INSTANCES = 1_000;
 
     public BigJsonController(ObjectMapper objectMapper, InstanceGenerator generator) {
         this.objectMapper = objectMapper;
         this.generator = generator;
-        instances = generator.getInstances(GENERATED_INSTANCES * 3);
     }
 
-
-    @GetMapping("/hello")
-    public String hello() {
-        Collection<Book> instances = generator.getInstances(1);
-        return "Hello";
-    }
-
-    @GetMapping("/books/singleton")
-    public GenericCollection<Collection<Book>> getSingletonBooks() {
+    @GetMapping
+    GenericCollection<Collection<Book>> getBooks(@RequestParam(required = false) Integer size) {
+        final Collection<Book> instances = generator.getInstances(calculateSize(size));
         return new GenericCollection(instances);
     }
 
-    @GetMapping("/books/jackson")
-    public GenericCollection<Collection<Book>> getBooks() {
-        Collection<Book> instances = generator.getInstances(GENERATED_INSTANCES);
-        return new GenericCollection(instances);
-    }
-
-    @GetMapping("/books/jackson-stream")
-    public void getBooksAsStream(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        Collection<Book> instances = generator.getInstances(GENERATED_INSTANCES);
+    @GetMapping("/writer")
+    void getBooksAsStream(@RequestParam(required = false) Integer size,
+                          @RequestParam(required = false) String serializer,
+                          @RequestParam(required = false) boolean use_cache,
+                          HttpServletResponse response) throws IOException {
 
         response.addHeader(HttpHeaders.CONTENT_TYPE, "application/json");
-        PrintWriter writer = response.getWriter();
-        objectMapper.writeValue(writer, new GenericCollection(instances));
+
+        final Collection<Book> instances = use_cache ? getFromCache(calculateSize(size)) : generator.getInstances(calculateSize(size));
+
+        final PrintWriter writer = response.getWriter();
+        if (serializer.equals("gson"))
+            gson.toJson("hello", writer);
+        else
+            objectMapper.writeValue(writer, new GenericCollection(instances));
     }
 
-    @GetMapping("/books/gson-stream")
-    public void getBooksAsGsonStream(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    private Collection<Book> getFromCache(int size) {
+        if (cache == null)
+            cache = generator.getInstances(size);
 
-        response.addHeader(HttpHeaders.CONTENT_TYPE, "application/json");
-        PrintWriter writer = response.getWriter();
-        gson.toJson("hello", writer);
+        if (size > cache.size())
+            cache.addAll(generator.getInstances(size - cache.size()));
+
+        return cache;
+    }
+
+    private int calculateSize(@RequestParam(required = false) Integer limit) {
+        return limit != null || isInvalid(limit) ? limit : DEFAULT_GENERATED_INSTANCES;
+    }
+
+    private boolean isInvalid(Integer limit) {
+        return limit.intValue() < 1;
     }
 
 }

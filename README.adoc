@@ -1,0 +1,95 @@
+= Big Json test service
+:icons: font
+:toc:
+:default-size: 1000
+
+Test bench to analyses solutions for services that require dealing big JSON responses.
+
+== Endpoints
+
+The following endpoints are available to test different approaches.
+
+=== Health check
+
+To test server basic availability.
+
+[source,shell]
+----
+curl http://localhost:8080/health
+----
+
+=== /books
+
+Returns a collection of instances randomly generated using default SpringBoot approach (sync + jackson).
+
+[source,shell]
+----
+curl http://localhost:8080/books?size=10000
+----
+
+|===
+|URL param |default |description
+
+| `size`
+| {default-size}
+| Number of instance to return.
+If not set, 0 or negative, default size ({default-size}) will be used.
+|===
+
+=== /books/writer
+
+Returns a collection of instances randomly generated.
+Data is manually written into the response writer from a configurable JSON serializer.
+
+[source,shell]
+----
+curl http://localhost:8080/books/?size=1&serializer=gson&use_cache=false
+----
+
+|===
+|URL param |default |description
+
+| `size`
+| {default-size}
+| Number of instance to return.
+If not set, 0 or negative, default size ({default-size}) will be used.
+
+| `serializer`
+| https://github.com/FasterXML/jackson[Jackson]
+| Allows changing the JSON serializer.
+Set `gson` to use https://github.com/google/gson[Gson].
+
+| `use_cache`
+| `false`
+| If `true`, will return the same instances from a local cache. +
+If the number requested is greater than stored, these will be generated.
+|===
+
+== Test process
+
+Build::
+mvn clean package
+
+Limitless execution::
+mvn clean package && java -jar target/big-json-0.0.1-SNAPSHOT.jar
+
+Limited memory execution::
+mvn clean package && java -XX:+UseSerialGC -XX:MaxRAM=100m -XshowSettings:vm -jar target/big-json-0.0.1-SNAPSHOT.jar
+
+Test::
+wrk -d1m -t2 -c2 $URL
+
+|===
+|Option |description
+
+| -d1m
+| Test duration: 1 minute
+
+| -t2
+| Number of threads: 2
+
+| -c2
+| Number of connections: 2
+|===
+
+NOTE: Increase `t` & `d` accordingly, but ensure c >= t (https://github.com/wg/wrk/issues/205[threads and connections?]).
