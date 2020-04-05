@@ -5,13 +5,15 @@ import lombok.Value;
 
 import java.time.LocalDate;
 import java.util.Map;
+import java.util.Optional;
 
 @Builder
 @Value
 public class Author {
 
     String name;
-    LocalDate birthday;
+    LocalDate birthDay;
+    Optional<LocalDate> deathDate;
     Map<String, String> metadata;
 
 }
