@@ -35,7 +35,7 @@ public class BigJsonController {
     }
 
     @GetMapping
-    GenericCollection<Collection<Book>> getBooks(@RequestParam(required = false) Integer size) {
+    GenericCollection<Collection<Book>> getBooksAsPojos(@RequestParam(required = false) Integer size) {
         final Collection<Book> instances = generator.getInstances(calculateSize(size));
         return new GenericCollection(instances);
     }

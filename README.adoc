@@ -24,7 +24,7 @@ Returns a collection of instances randomly generated using default SpringBoot ap
 
 [source,shell]
 ----
-curl http://localhost:8080/books?size=10000
+curl "http://localhost:8080/books?size=10000"
 ----
 
 |===
@@ -66,6 +66,7 @@ If the number requested is greater than stored, these will be generated.
 |===
 
 == Test process
+:memory-options: -XX:+UseSerialGC -XX:MaxRAM=256m -XX:MaxRAMPercentage=80.0
 
 Build::
 mvn clean package
@@ -74,10 +75,13 @@ Limitless execution::
 mvn clean package && java -jar target/big-json-0.0.1-SNAPSHOT.jar
 
 Limited memory execution::
-mvn clean package && java -XX:+UseSerialGC -XX:MaxRAM=256m -XX:MaxRAMPercentage=80.0 -XshowSettings:vm -jar target/big-json-0.0.1-SNAPSHOT.jar
+mvn clean package && java {memory-options} -XshowSettings:vm -jar target/big-json-0.0.1-SNAPSHOT.jar
 
 NOTE: Add `-Xmx90m` or `-XX:MaxRAMPercentage=80.0` to maximise usage of memory for heap.
 Otherwise, JVM will use 25% of MaxRAM for heap.
+
+Docker execution::
+mvn clean package -Pdocker-build && JAVA_TOOL_OPTIONS="{memory-options}" docker run -e JAVA_TOOL_OPTIONS -m256m --rm -p8080:8080 bigjson
 
 Test::
 wrk -d1m -t2 -c2 $URL

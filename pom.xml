@@ -91,6 +91,15 @@
     </dependency>
   </dependencies>
 
+  <profiles>
+    <profile>
+      <id>docker-build</id>
+      <build>
+        <finalName>app</finalName>
+      </build>
+    </profile>
+  </profiles>
+
   <build>
     <plugins>
       <!-- Stores actual dependencies inside target/dependency -->
